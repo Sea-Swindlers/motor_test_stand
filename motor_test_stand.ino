@@ -29,8 +29,8 @@ const int LOADCELL_2_SCK_PIN = 5;
 const int VOLTAGE_READ_PIN = A1;
 const int CURRENT_READ_PIN = A2;
 
-const int READINGS_PER_AVERAGE = 20;
 
+const int READINGS_PER_AVERAGE = 20;
 
 
 void setup_scale(HX711& scale, int dout_pin, int sck_pin) {
