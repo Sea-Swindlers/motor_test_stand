@@ -2,35 +2,22 @@
 #include "HX711_2.h"
 
 #include <stdarg.h>
-#define SERIAL_PRINTF_MAX_BUFF      256
-void serialPrintf(const char *fmt, ...);void serialPrintf(const char *fmt, ...) {
-  /* Buffer for storing the formatted data */
-  char buff[SERIAL_PRINTF_MAX_BUFF];  /* pointer to the variable arguments list */
-  va_list pargs;  /* Initialise pargs to point to the first optional argument */
-  va_start(pargs, fmt);  /* create the formatted data and store in buff */
-  vsnprintf(buff, SERIAL_PRINTF_MAX_BUFF, fmt, pargs);
-  va_end(pargs);  Serial.print(buff);
-}
-
-
-
-
-HX711 scale1;
-HX711 scale2;
 
 // HX711 circuit wiring
-const int LOADCELL_1_DOUT_PIN = 2;
-const int LOADCELL_1_SCK_PIN = 3;
+const int LOADCELL_1_DOUT_PIN = 4;
+const int LOADCELL_1_SCK_PIN = 6;
 
-const int LOADCELL_2_DOUT_PIN = 4;
-const int LOADCELL_2_SCK_PIN = 5;
-
+const int LOADCELL_2_DOUT_PIN = 8;
+const int LOADCELL_2_SCK_PIN = 9;
 
 const int VOLTAGE_READ_PIN = A1;
 const int CURRENT_READ_PIN = A2;
 
+const int READINGS_PER_AVERAGE = 10;
 
-const int READINGS_PER_AVERAGE = 20;
+
+HX711 scale1;
+HX711 scale2;
 
 
 void setup_scale(HX711& scale, int dout_pin, int sck_pin) {
@@ -47,7 +34,7 @@ void setup_scale(HX711& scale, int dout_pin, int sck_pin) {
   Serial.println(scale.read());      // print a raw reading from the ADC
 
   Serial.print("read average: \t\t");
-  Serial.println(scale.read_average(20));   // print the average of 20 readings from the ADC
+  Serial.println(scale.read_average(5));   // print the average of 20 readings from the ADC
 
   Serial.print("get value: \t\t");
   Serial.println(scale.get_value(5));   // print the average of 5 readings from the ADC minus the tare weight (not set yet)
@@ -65,7 +52,7 @@ void setup_scale(HX711& scale, int dout_pin, int sck_pin) {
   Serial.println(scale.read());                 // print a raw reading from the ADC
 
   Serial.print("read average: \t\t");
-  Serial.println(scale.read_average(20));       // print the average of 20 readings from the ADC
+  Serial.println(scale.read_average(5));       // print the average of 20 readings from the ADC
 
   Serial.print("get value: \t\t");
   Serial.println(scale.get_value(5));   // print the average of 5 readings from the ADC minus the tare weight, set with tare()
@@ -74,6 +61,7 @@ void setup_scale(HX711& scale, int dout_pin, int sck_pin) {
   Serial.println(scale.get_units(5), 1);        // print the average of 5 readings from the ADC minus tare weight, divided
   // by the SCALE parameter set with set_scale
 }
+
 
 
 void read_and_print(HX711& scale) {
@@ -85,9 +73,12 @@ void read_and_print(HX711& scale) {
   scale.power_down();              // put the ADC in sleep mode
 }
 
+
+
 float read_scale(HX711& scale) {
   return scale.get_units(1);
 }
+
 
 
 void setup() {
@@ -121,10 +112,13 @@ void loop() {
   float voltage = 0;
   float current = 0;
 
+  float scale_a = 0;
+  float scale_b = 0;
+
   for (int i = 0; i < READINGS_PER_AVERAGE; i++) {
-    float scale_a = read_scale(scale1);
-    float scale_b = read_scale(scale2);
-    net_force += scale_a = scale_b;
+    scale_a = read_scale(scale1);
+    scale_b = read_scale(scale2) * -1;
+    net_force += scale_a + scale_b;
 
     voltage += analogRead(VOLTAGE_READ_PIN) / 50.0 * 12.0;  // TODO: change this calibration value if another voltage divider is instaled
     current += analogRead(CURRENT_READ_PIN) / 44.0 * 3.4;
@@ -135,8 +129,24 @@ void loop() {
   current /= READINGS_PER_AVERAGE;
 
   // print stuff
+//  Serial.print("scale_a: ");
+//  Serial.println(scale_a, 3);
+//  Serial.print("scale_b: ");
+//  Serial.println(scale_b, 3);
+//  Serial.print("net_force: ");
+//  Serial.println(net_force, 3);
 
-  serialPrintf("READING: \"net force\": %2.2f \"volts\": %2.2f, \"amps\": %2.2f", net_force, voltage, current);
+  Serial.print("scale_a: ");
+  Serial.print(scale_a, 3);
+  Serial.print(", scale_b: ");
+  Serial.print(scale_b, 3);
+  Serial.print(", net_force: ");
+  Serial.print(net_force, 2);
+  Serial.print(", voltage: ");
+  Serial.print(voltage, 2);
+  Serial.print(", current: ");
+  Serial.println(current, 2);
+  
   
   while (millis() < starttime + 100) {}
 }
