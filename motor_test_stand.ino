@@ -11,7 +11,7 @@ const int LOADCELL_2_DOUT_PIN = 8;
 const int LOADCELL_2_SCK_PIN = 9;
 
 const int VOLTAGE_READ_PIN = A1;
-const int CURRENT_READ_PIN = A2;
+const int CURRENT_READ_PIN = A0;
 
 const int READINGS_PER_AVERAGE = 10;
 
@@ -120,8 +120,8 @@ void loop() {
     scale_b = read_scale(scale2) * -1;
     net_force += scale_a + scale_b;
 
-    voltage += analogRead(VOLTAGE_READ_PIN) / 50.0 * 12.0;  // TODO: change this calibration value if another voltage divider is instaled
-    current += analogRead(CURRENT_READ_PIN) / 44.0 * 3.4;
+    voltage += analogRead(VOLTAGE_READ_PIN) / 1024.0 / 50.0 * 12.0;  // TODO: change this calibration value if another voltage divider is instaled
+    current += analogRead(CURRENT_READ_PIN) / 1024.0 / 44.0 * 3.4;
   }  
 
   net_force /= READINGS_PER_AVERAGE;
