@@ -3,17 +3,26 @@
 
 #include <stdarg.h>
 
-// HX711 circuit wiring
-const int LOADCELL_1_DOUT_PIN = 4;
-const int LOADCELL_1_SCK_PIN = 6;
+#include <Servo.h>
 
-const int LOADCELL_2_DOUT_PIN = 8;
-const int LOADCELL_2_SCK_PIN = 9;
+const int esc_pin = 10;  // TODO
+Servo myservo;
+
+
+// HX711 circuit wiring
+const int LOADCELL_1_DOUT_PIN = 8;
+const int LOADCELL_1_SCK_PIN = 9;
+
+//const int LOADCELL_2_DOUT_PIN = 4;
+//const int LOADCELL_2_SCK_PIN = 6;
 
 const int VOLTAGE_READ_PIN = A1;
 const int CURRENT_READ_PIN = A0;
 
-const int READINGS_PER_AVERAGE = 10;
+const int READINGS_PER_AVERAGE = 3;
+
+
+const float force_calibration_factor = 1.0;
 
 
 HX711 scale1;
@@ -84,6 +93,9 @@ float read_scale(HX711& scale) {
 void setup() {
   // put your setup code here, to run once:
 
+  myservo.attach(esc_pin);
+  myservo.write(40);
+
   Serial.begin(115200);
 
   Serial.println("HX711 Demo");
@@ -91,22 +103,21 @@ void setup() {
   Serial.println("Initializing the scale");
 
   setup_scale(scale1, LOADCELL_1_DOUT_PIN, LOADCELL_1_SCK_PIN);
-  setup_scale(scale2, LOADCELL_2_DOUT_PIN, LOADCELL_2_SCK_PIN);
+//  setup_scale(scale2, LOADCELL_2_DOUT_PIN, LOADCELL_2_SCK_PIN);
 
   read_scale(scale1);
-  read_scale(scale2);
+//  read_scale(scale2);
 
 
   Serial.println("Readings:");
+  Serial.setTimeout(25);
+
+  pinMode(13, INPUT);
 }
 
-
-void loop() {
-
-  unsigned long starttime = millis();
+void read_iter() {
 
   scale1.power_up();
-  scale2.power_up();
 
   float net_force = 0;
   float voltage = 0;
@@ -117,36 +128,59 @@ void loop() {
 
   for (int i = 0; i < READINGS_PER_AVERAGE; i++) {
     scale_a = read_scale(scale1);
-    scale_b = read_scale(scale2) * -1;
-    net_force += scale_a + scale_b;
+    net_force += scale_a * force_calibration_factor;
 
-    voltage += analogRead(VOLTAGE_READ_PIN) / 1024.0 / 50.0 * 12.0;  // TODO: change this calibration value if another voltage divider is instaled
-    current += analogRead(CURRENT_READ_PIN) / 1024.0 / 44.0 * 3.4;
+    voltage += analogRead(VOLTAGE_READ_PIN) * (3.3 / 1024.0) * (50.0 / 12.0) * (11.5 / 7.77);
+    current += analogRead(CURRENT_READ_PIN) * (3.3 / 1024.0) / 3.4 * 44.0;
+//    voltage += analogRead(VOLTAGE_READ_PIN);  // TODO: change this calibration value if another voltage divider is instaled
+//    current += analogRead(CURRENT_READ_PIN);
   }  
 
   net_force /= READINGS_PER_AVERAGE;
   voltage /= READINGS_PER_AVERAGE;
   current /= READINGS_PER_AVERAGE;
-
-  // print stuff
-//  Serial.print("scale_a: ");
-//  Serial.println(scale_a, 3);
-//  Serial.print("scale_b: ");
-//  Serial.println(scale_b, 3);
-//  Serial.print("net_force: ");
-//  Serial.println(net_force, 3);
-
-  Serial.print("scale_a: ");
-  Serial.print(scale_a, 3);
-  Serial.print(", scale_b: ");
-  Serial.print(scale_b, 3);
-  Serial.print(", net_force: ");
+  
+  Serial.print(voltage * current, 5);
+  Serial.print(" ");
   Serial.print(net_force, 2);
-  Serial.print(", voltage: ");
-  Serial.print(voltage, 2);
-  Serial.print(", current: ");
-  Serial.println(current, 2);
-  
-  
-  while (millis() < starttime + 100) {}
+  Serial.print(" ");
+  Serial.print(voltage, 3);
+  Serial.print(" ");
+  Serial.print(current, 3);
+  Serial.println();  
+}
+
+void do_ramp(int maxPower) {
+  Serial.print("pwm ");
+      Serial.print("power ");
+      Serial.print("net_force ");
+      Serial.print("voltage ");
+      Serial.print("current ");
+      Serial.println();
+      for (int i = 50; i <= maxPower; i++) {
+          myservo.write(i);
+          unsigned long starttime = millis();
+          while (millis() < starttime + 1000) {
+            Serial.print(i);
+            Serial.print(" ");
+            read_iter();
+            int input = Serial.parseInt();
+            if (input > 0) {
+              // this is a safety thing, so the ramp can be canceled any time
+              return;
+            }
+          }
+      }
+    }
+
+void loop() {
+
+  if(Serial.available() > 0) {
+    int maxPower = Serial.parseInt();
+    if (maxPower > 0) {
+      do_ramp(maxPower);
+    }
+  // turn off the motor
+  myservo.write(40);
+  }
 }
