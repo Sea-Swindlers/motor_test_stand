@@ -94,7 +94,7 @@ void setup() {
   // put your setup code here, to run once:
 
   myservo.attach(esc_pin);
-  myservo.write(40);
+  myservo.write(90);
 
   Serial.begin(115200);
 
@@ -151,14 +151,23 @@ void read_iter() {
 }
 
 void do_ramp(int maxPower) {
+  bool reverse = false;
+  if (maxPower < 90) {
+    reverse = true;
+  }
   Serial.print("pwm ");
       Serial.print("power ");
       Serial.print("net_force ");
       Serial.print("voltage ");
       Serial.print("current ");
       Serial.println();
-      for (int i = 50; i <= maxPower; i++) {
-          myservo.write(i);
+      for (int i = 40; i <= maxPower; i++) {
+          if (reverse) {
+            myservo.write(180 - i);
+          }
+          else {
+            myservo.write(i);
+          }
           unsigned long starttime = millis();
           while (millis() < starttime + 1000) {
             Serial.print(i);
