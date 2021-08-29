@@ -161,7 +161,7 @@ void do_ramp(int maxPower) {
       Serial.print("voltage ");
       Serial.print("current ");
       Serial.println();
-      for (int i = 40; i <= maxPower; i++) {
+      for (int i = 45; i <= maxPower; i++) {
           if (reverse) {
             myservo.write(180 - i);
           }
@@ -190,6 +190,6 @@ void loop() {
       do_ramp(maxPower);
     }
   // turn off the motor
-  myservo.write(40);
+  myservo.write(45);
   }
 }
